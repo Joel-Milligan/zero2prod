@@ -5,7 +5,7 @@ use sqlx::PgPool;
 use tracing_actix_web::TracingLogger;
 
 use crate::{
-    email_client::{self, EmailClient},
+    email_client::EmailClient,
     routes::{health_check, subscribe},
 };
 

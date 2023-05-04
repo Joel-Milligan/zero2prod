@@ -14,8 +14,7 @@ impl EmailClient {
     pub fn new(base_url: String, sender: SubscriberEmail, auth_token: Secret<String>) -> Self {
         Self {
             http_client: Client::new(),
-            base_url: reqwest::Url::parse(&base_url)
-                .expect(&format!("Could not parse {base_url} to Url.")),
+            base_url: reqwest::Url::parse(&base_url).expect("Could not parse url"),
             sender,
             auth_token,
         }
