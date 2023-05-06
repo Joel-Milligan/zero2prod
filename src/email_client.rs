@@ -12,8 +12,13 @@ pub struct EmailClient {
 
 impl EmailClient {
     pub fn new(base_url: String, sender: SubscriberEmail, auth_token: Secret<String>) -> Self {
+        let http_client = Client::builder()
+            .timeout(std::time::Duration::from_secs(10))
+            .build()
+            .unwrap();
+
         Self {
-            http_client: Client::new(),
+            http_client,
             base_url: reqwest::Url::parse(&base_url).expect("Could not parse url"),
             sender,
             auth_token,
@@ -63,7 +68,7 @@ mod tests {
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
     use secrecy::Secret;
-    use wiremock::matchers::{header, header_exists, method, path};
+    use wiremock::matchers::{any, header, header_exists, method, path};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     use crate::domain::SubscriberEmail;
@@ -168,6 +173,26 @@ mod tests {
         // Assert
         assert_err!(outcome);
     }
+
+    #[tokio::test]
+    async fn send_email_times_out_if_the_server_takes_too_long() {
+        // Arrange
+        let mock_server = MockServer::start().await;
+        let email_client = email_client(mock_server.uri());
+
+        let response = ResponseTemplate::new(200).set_delay(std::time::Duration::from_secs(180));
+
+        Mock::given(any())
+            .respond_with(response)
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        // Act
+        let outcome = email_client
+            .send_email(email(), &subject(), &content(), &content())
+            .await;
+
         // Assert
         assert_err!(outcome);
     }
