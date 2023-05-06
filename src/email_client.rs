@@ -40,7 +40,8 @@ impl EmailClient {
             .header("X-Postmark-Server-Token", self.auth_token.expose_secret())
             .json(&request_body)
             .send()
-            .await?;
+            .await?
+            .error_for_status()?;
         Ok(())
     }
 }
@@ -57,6 +58,7 @@ struct SendEmailRequest<'a> {
 
 #[cfg(test)]
 mod tests {
+    use claims::{assert_err, assert_ok};
     use fake::faker::internet::en::SafeEmail;
     use fake::faker::lorem::en::{Paragraph, Sentence};
     use fake::{Fake, Faker};
@@ -123,5 +125,50 @@ mod tests {
 
         // Assert
         // Mock expectations are checked on drop
+    }
+
+    #[tokio::test]
+    async fn send_email_succeeds_if_the_server_returns_200() {
+        // Arrange
+        let mock_server = MockServer::start().await;
+        let email_client = email_client(mock_server.uri());
+
+        Mock::given(any())
+            .respond_with(ResponseTemplate::new(200))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        // Act
+        let outcome = email_client
+            .send_email(email(), &subject(), &content(), &content())
+            .await;
+
+        // Assert
+        assert_ok!(outcome);
+    }
+
+    #[tokio::test]
+    async fn send_email_fails_if_the_server_returns_500() {
+        // Arrange
+        let mock_server = MockServer::start().await;
+        let email_client = email_client(mock_server.uri());
+
+        Mock::given(any())
+            .respond_with(ResponseTemplate::new(500))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        // Act
+        let outcome = email_client
+            .send_email(email(), &subject(), &content(), &content())
+            .await;
+
+        // Assert
+        assert_err!(outcome);
+    }
+        // Assert
+        assert_err!(outcome);
     }
 }
