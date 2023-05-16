@@ -22,7 +22,6 @@ impl TryFrom<FormData> for NewSubscriber {
     fn try_from(value: FormData) -> Result<Self, Self::Error> {
         let email = SubscriberEmail::parse(value.email)?;
         let name = SubscriberName::parse(value.name)?;
-
         Ok(Self { email, name })
     }
 }
