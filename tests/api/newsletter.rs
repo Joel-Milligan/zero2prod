@@ -26,7 +26,7 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
         }
     );
 
-    let response = app.post_newsletter(newsletter_request_body).await;
+    let response = app.post_newsletters(newsletter_request_body).await;
 
     // Assert
     assert_eq!(response.status().as_u16(), 200);
@@ -55,14 +55,14 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
         }
     );
 
-    let response = app.post_newsletter(newsletter_request_body).await;
+    let response = app.post_newsletters(newsletter_request_body).await;
 
     // Assert
     assert_eq!(response.status().as_u16(), 200);
 }
 
 #[tokio::test]
-async fn newsletters_reutrns_400_for_invalid_data() {
+async fn newsletters_returns_400_for_invalid_data() {
     // Arrange
     let app = spawn_app().await;
     let test_cases = vec![
@@ -83,7 +83,7 @@ async fn newsletters_reutrns_400_for_invalid_data() {
 
     for (invalid_body, error_message) in test_cases {
         // Act
-        let response = app.post_newsletter(invalid_body).await;
+        let response = app.post_newsletters(invalid_body).await;
 
         // Assert
         assert_eq!(
@@ -92,6 +92,33 @@ async fn newsletters_reutrns_400_for_invalid_data() {
             "The API did not fail with 400 Bad Request when the payload was {error_message}"
         );
     }
+}
+
+#[tokio::test]
+async fn requests_missing_authorization_are_rejected() {
+    // Arrange
+    let app = spawn_app().await;
+
+    // Act
+    let response = reqwest::Client::new()
+        .post(&format!("{}/newsletters", &app.address))
+        .json(&serde_json::json!({
+            "title": "Newsletter title",
+            "content": {
+                "text": "Newsletter body as plain text",
+                "html": "<p>Newsletter body as HTML</p>",
+            }
+        }))
+        .send()
+        .await
+        .expect("Failed to execute request.");
+
+    // Assert
+    assert_eq!(response.status().as_u16(), 401);
+    assert_eq!(
+        r#"Basic realm="publish""#,
+        response.headers()["WWW-Authenticate"]
+    );
 }
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
