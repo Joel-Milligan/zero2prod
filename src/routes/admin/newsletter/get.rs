@@ -9,23 +9,19 @@ pub async fn publish_newsletter_form() -> Result<HttpResponse, actix_web::Error>
     <title>Send Newsletter</title>
 </head>
 <body>
-    <form action="/admin/password" method="post">
-        <label>Current password
-            <input type="password" placeholder="Enter current password" name="current_password" />
+    <form action="/admin/newsletter" method="post">
+        <label>Title
+            <input type="text" placeholder="Enter title of newsletter issue" name="title" />
         </label>
         <br/>
-        <label>New password
-            <input type="password" placeholder="Enter new password" name="new_password" />
+        <label>Body
+            <input type="text" placeholder="Enter content of newsletter issue" name="content" />
         </label>
         <br/>
-        <label>Confirm new password
-            <input type="password" placeholder="Enter new password again" name="new_password_check" />
-        </label>
-        <br/>
-        <button type="submit">Change password</button>
+        <button type="submit">Publish newsletter</button>
     </form>
     <p><a href="/admin/dashboard">&lt;- Back</a></p>
 </body>
-</html"#
+</html"#,
     ))
 }
