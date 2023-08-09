@@ -14,8 +14,12 @@ pub async fn publish_newsletter_form() -> Result<HttpResponse, actix_web::Error>
             <input type="text" placeholder="Enter title of newsletter issue" name="title" />
         </label>
         <br/>
-        <label>Body
-            <input type="text" placeholder="Enter content of newsletter issue" name="content" />
+        <label>Text
+            <input type="text" placeholder="Enter content of newsletter issue" name="text" />
+        </label>
+        <br/>
+        <label>HTML
+            <input type="text" placeholder="Enter HTML of newsletter issue" name="html" />
         </label>
         <br/>
         <button type="submit">Publish newsletter</button>
