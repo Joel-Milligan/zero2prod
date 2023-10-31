@@ -1,11 +1,11 @@
 use actix_web::{web, HttpResponse};
 use sqlx::PgPool;
 
+use crate::authentication::UserId;
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
 use crate::routes::admin::dashboard::get_username;
-use crate::session_state::TypedSession;
-use crate::utils::{e500, see_other};
+use crate::utils::e500;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -20,20 +20,17 @@ struct ConfirmedSubscriber {
 
 #[tracing::instrument(
     name = "Publish a newsletter issue",
-    skip(form, pool, email_client, session),
+    skip(form, pool, email_client),
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn publish_newsletter(
     form: web::Form<FormData>,
     pool: web::Data<PgPool>,
+    user_id: web::ReqData<UserId>,
     email_client: web::Data<EmailClient>,
-    session: TypedSession,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let username = if let Some(user_id) = session.get_user_id().map_err(e500)? {
-        get_username(user_id, &pool).await.map_err(e500)?
-    } else {
-        return Ok(see_other("/login"));
-    };
+    let user_id = user_id.into_inner();
+    let username = get_username(*user_id, &pool).await.map_err(e500)?;
 
     tracing::Span::current().record("username", &tracing::field::display(&username));
 
