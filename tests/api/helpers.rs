@@ -67,7 +67,7 @@ impl TestApp {
         ConfirmationLinks { html, plain_text }
     }
 
-    pub async fn post_newsletters<Body>(&self, body: &Body) -> reqwest::Response
+    pub async fn post_newsletter<Body>(&self, body: &Body) -> reqwest::Response
     where
         Body: serde::Serialize,
     {

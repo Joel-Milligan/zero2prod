@@ -1,7 +1,7 @@
 use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
 
-use crate::helpers::{spawn_app, ConfirmationLinks, TestApp};
+use crate::helpers::{assert_is_redirect_to, spawn_app, ConfirmationLinks, TestApp};
 
 #[tokio::test]
 async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
@@ -28,10 +28,10 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
         "html": "<p>Newsletter body as HTML</p>",
     });
 
-    let response = app.post_newsletters(&newsletter_request_body).await;
+    let response = app.post_newsletter(&newsletter_request_body).await;
 
     // Assert
-    assert_eq!(response.status().as_u16(), 200);
+    assert_is_redirect_to(&response, "/admin/newsletter");
 }
 
 #[tokio::test]
@@ -59,10 +59,10 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
         "html": "<p>Newsletter body as HTML</p>",
     });
 
-    let response = app.post_newsletters(&newsletter_request_body).await;
+    let response = app.post_newsletter(&newsletter_request_body).await;
 
     // Assert
-    assert_eq!(response.status().as_u16(), 200);
+    assert_is_redirect_to(&response, "/admin/newsletter");
 }
 
 #[tokio::test]
@@ -91,7 +91,7 @@ async fn newsletters_returns_400_for_invalid_data() {
 
     for (invalid_body, error_message) in test_cases {
         // Act
-        let response = app.post_newsletters(&invalid_body).await;
+        let response = app.post_newsletter(&invalid_body).await;
 
         // Assert
         assert_eq!(

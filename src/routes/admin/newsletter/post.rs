@@ -1,11 +1,11 @@
 use actix_web::{web, HttpResponse};
+use actix_web_flash_messages::FlashMessage;
+use anyhow::Context;
 use sqlx::PgPool;
 
-use crate::authentication::UserId;
 use crate::domain::SubscriberEmail;
 use crate::email_client::EmailClient;
-use crate::routes::admin::dashboard::get_username;
-use crate::utils::e500;
+use crate::utils::{e500, see_other};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -26,14 +26,8 @@ struct ConfirmedSubscriber {
 pub async fn publish_newsletter(
     form: web::Form<FormData>,
     pool: web::Data<PgPool>,
-    user_id: web::ReqData<UserId>,
     email_client: web::Data<EmailClient>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    let user_id = user_id.into_inner();
-    let username = get_username(*user_id, &pool).await.map_err(e500)?;
-
-    tracing::Span::current().record("username", &tracing::field::display(&username));
-
     let subscribers = get_confirmed_subscribers(&pool).await.map_err(e500)?;
     for subscriber in subscribers {
         match subscriber {
@@ -41,18 +35,23 @@ pub async fn publish_newsletter(
                 email_client
                     .send_email(&subscriber.email, &form.title, &form.html, &form.text)
                     .await
+                    .with_context(|| {
+                        format!("Failed to send newsletter issue to {}", subscriber.email)
+                    })
                     .map_err(e500)?;
             }
             Err(error) => {
                 tracing::warn!(
                     error.cause_chain = ?error,
+                    error.message = %error,
                     "Skipping a confirmed subscriber. \
                     Their stored contact details are invalid",
-                )
+                );
             }
         }
     }
-    Ok(HttpResponse::Ok().finish())
+    FlashMessage::info("The newsletter issue has been published!").send();
+    Ok(see_other("/admin/newsletter"))
 }
 
 #[tracing::instrument(name = "Get confirmed subscribers", skip(pool))]
