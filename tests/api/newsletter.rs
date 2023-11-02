@@ -26,6 +26,7 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
         "title": "Newsletter title",
         "text": "Newsletter body as plain text",
         "html": "<p>Newsletter body as HTML</p>",
+        "idempotency_key": uuid::Uuid::new_v4(),
     });
 
     let response = app.post_newsletter(&newsletter_request_body).await;
@@ -57,6 +58,7 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
         "title": "Newsletter title",
         "text": "Newsletter body as plain text",
         "html": "<p>Newsletter body as HTML</p>",
+        "idempotency_key": uuid::Uuid::new_v4(),
     });
 
     let response = app.post_newsletter(&newsletter_request_body).await;
@@ -80,6 +82,7 @@ async fn newsletters_returns_400_for_invalid_data() {
             serde_json::json!({
                 "text": "Newsletter body as plain text",
                 "html": "<p>Newsletter body as HTML</p>",
+                "idempotency_key": uuid::Uuid::new_v4(),
             }),
             "missing title",
         ),
@@ -99,6 +102,40 @@ async fn newsletters_returns_400_for_invalid_data() {
             400,
             "The API did not fail with 400 Bad Request when the payload was {error_message}"
         );
+    }
+}
+
+#[tokio::test]
+async fn newsletter_creation_is_idempotent() {
+    // Arrange
+    let app = spawn_app().await;
+    create_confirmed_subscriber(&app).await;
+    app.post_login(&serde_json::json!({
+        "username": &app.test_user.username,
+        "password": &app.test_user.password,
+    }))
+    .await;
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
+    let newsletter_request_body = serde_json::json!({
+        "title": "Newsletter title",
+        "text": "Newsletter body as plain text",
+        "html": "<p>Newsletter body as HTML</p>",
+        "idempotency_key": uuid::Uuid::new_v4().to_string()
+    });
+
+    for _ in 0..2 {
+        let response = app.post_newsletter(&newsletter_request_body).await;
+        assert_is_redirect_to(&response, "/admin/newsletter");
+
+        let html_page = app.get_newsletter_html().await;
+        assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
     }
 }
 
