@@ -29,11 +29,11 @@ pub async fn publish_newsletter_form(
         </label>
         <br/>
         <label>Text
-            <input type="text" placeholder="Enter content of newsletter issue" name="text" />
+            <input type="text" placeholder="Enter content of newsletter issue" name="text_content" />
         </label>
         <br/>
         <label>HTML
-            <input type="text" placeholder="Enter HTML of newsletter issue" name="html" />
+            <input type="text" placeholder="Enter HTML of newsletter issue" name="html_content" />
         </label>
         <br/>
         <input hidden type="text" name="idempotency_key" value="{idempotency_key}" />
